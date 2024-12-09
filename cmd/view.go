@@ -28,6 +28,7 @@ var viewCmd = &cobra.Command{
 
 		for _, file := range files {
 			processFile(file)
+			fmt.Println("--------------------")
 		}
 	},
 }
@@ -87,15 +88,15 @@ func processFile(file string) {
 	}
 	defer f.Close()
 
+	fmt.Printf("ファイル: %s\n", file)
+
 	meta, err := exif.Decode(f)
 	if err != nil {
 		log.Printf("EXIF情報を取得できません: %s (%v)", file, err)
 		return
 	}
 
-	fmt.Printf("ファイル: %s\n", file)
 	printExifMinimal(meta)
-	fmt.Println("--------------------")
 }
 
 func printExifMinimal(meta *exif.Exif) {
