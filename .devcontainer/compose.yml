@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  exiftool-dev-container:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../..:/workspaces:cached 
+      - ~/.zshrc:/root/.zshrc
+    command: sleep infinity

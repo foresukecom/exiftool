@@ -1,0 +1,5 @@
+{
+  "dockerComposeFile": "compose.yml",
+  "service": "exiftool-dev-container",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}"
+}
