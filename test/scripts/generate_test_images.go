@@ -1,4 +1,4 @@
-package main
+package generator
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ import (
 	"github.com/rwcarlsen/goexif/tiff"
 )
 
-func main() {
+func GenerateTestImages() {
 	outputDir := "../images"
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		fmt.Printf("ディレクトリの作成に失敗しました: %v\n", err)

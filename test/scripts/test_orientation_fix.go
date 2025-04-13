@@ -1,4 +1,4 @@
-package main
+package tester
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ import (
 	"github.com/rwcarlsen/goexif/exif"
 )
 
-func main() {
+func TestOrientationFix() {
 	imagesDir := "../images"
 	
 	resultsDir := "../results"
