@@ -9,11 +9,11 @@ build:
 
 # テスト画像の生成
 generate-test-images:
-	cd test/scripts && go run main.go generate
+	cd test/scripts && go run test_all.go generate
 
 # テストの実行
 run-tests: build generate-test-images
-	cd test/scripts && go run main.go test
+	cd test/scripts && go run test_all.go test
 
 # テスト環境のセットアップと実行（一括実行）
 test: build generate-test-images run-tests
