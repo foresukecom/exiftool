@@ -11,7 +11,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/rwcarlsen/goexif/exif"
 	"github.com/spf13/cobra"
+	"golang.org/x/image/draw"
 )
 
 var outputDir string
@@ -87,23 +89,102 @@ func removeEXIF(file string, outputDir string) error {
 }
 
 func removeExifData(data []byte) ([]byte, error) {
+	orientation := 1 // デフォルト値（通常の向き）
+	
+	x, err := exif.Decode(bytes.NewReader(data))
+	if err == nil {
+		if tag, err := x.Get(exif.Orientation); err == nil {
+			if val, err := tag.Int(0); err == nil {
+				orientation = int(val)
+			}
+		}
+	}
+	
 	// メモリ上で画像をデコード
 	img, format, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
 		return nil, errors.New("画像のデコードに失敗しました")
 	}
-
+	
 	// JPEG形式でなければエラー
 	if format != "jpeg" {
 		return nil, errors.New("JPEG形式の画像のみサポートされています")
 	}
-
+	
+	img = applyOrientation(img, orientation)
+	
 	// EXIFデータを削除してバッファにエンコード
 	var buffer bytes.Buffer
 	err = jpeg.Encode(&buffer, img, &jpeg.Options{Quality: 100})
 	if err != nil {
 		return nil, errors.New("画像のエンコードに失敗しました")
 	}
-
+	
 	return buffer.Bytes(), nil
+}
+func applyOrientation(img image.Image, orientation int) image.Image {
+	bounds := img.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+	
+	if orientation == 1 {
+		return img
+	}
+	
+	var dst *image.RGBA
+	
+	if orientation == 5 || orientation == 6 || orientation == 7 || orientation == 8 {
+		dst = image.NewRGBA(image.Rect(0, 0, height, width))
+	} else {
+		dst = image.NewRGBA(image.Rect(0, 0, width, height))
+	}
+	
+	switch orientation {
+	case 2: // 水平方向に反転
+		for y := 0; y < height; y++ {
+			for x := 0; x < width; x++ {
+				dst.Set(width-x-1, y, img.At(x, y))
+			}
+		}
+	case 3: // 180度回転
+		for y := 0; y < height; y++ {
+			for x := 0; x < width; x++ {
+				dst.Set(width-x-1, height-y-1, img.At(x, y))
+			}
+		}
+	case 4: // 垂直方向に反転
+		for y := 0; y < height; y++ {
+			for x := 0; x < width; x++ {
+				dst.Set(x, height-y-1, img.At(x, y))
+			}
+		}
+	case 5: // 270度回転して水平方向に反転
+		for y := 0; y < height; y++ {
+			for x := 0; x < width; x++ {
+				dst.Set(y, x, img.At(x, y))
+			}
+		}
+	case 6: // 90度回転 (時計回り)
+		for y := 0; y < height; y++ {
+			for x := 0; x < width; x++ {
+				dst.Set(height-y-1, x, img.At(x, y))
+			}
+		}
+	case 7: // 90度回転して水平方向に反転
+		for y := 0; y < height; y++ {
+			for x := 0; x < width; x++ {
+				dst.Set(height-y-1, width-x-1, img.At(x, y))
+			}
+		}
+	case 8: // 270度回転 (90度反時計回り)
+		for y := 0; y < height; y++ {
+			for x := 0; x < width; x++ {
+				dst.Set(y, width-x-1, img.At(x, y))
+			}
+		}
+	default:
+		draw.Draw(dst, dst.Bounds(), img, bounds.Min, draw.Src)
+	}
+	
+	return dst
 }
