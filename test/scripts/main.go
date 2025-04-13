@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 	
-	"exiftool/test/scripts/generator"
-	"exiftool/test/scripts/tester"
+	"./generator"
+	"./tester"
 )
 
 func main() {
