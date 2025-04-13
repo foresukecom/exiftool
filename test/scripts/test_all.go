@@ -7,14 +7,12 @@ import (
 	"image/color"
 	"image/draw"
 	"image/jpeg"
-	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 
 	"github.com/rwcarlsen/goexif/exif"
-	"github.com/rwcarlsen/goexif/tiff"
 )
 
 func main() {
@@ -92,41 +90,17 @@ func saveImageWithOrientation(img image.Image, filename string, orientation int)
 		return fmt.Errorf("JPEGエンコードに失敗: %v", err)
 	}
 	
-	e := exif.Exif{
-		Tiff: tiff.Tiff{
-			Dirs: []*tiff.Dir{
-				{
-					Fields: map[uint16]*tiff.Field{
-						0x0112: tiff.NewField(0x0112, tiff.Short, 1, []uint16{uint16(orientation)}),
-					},
-				},
-			},
-		},
+	if err := os.WriteFile(filename, buf.Bytes(), 0644); err != nil {
+		return fmt.Errorf("ファイルの保存に失敗: %v", err)
 	}
 	
-	var exifBuf bytes.Buffer
-	if err := e.Encode(&exifBuf); err != nil {
-		return fmt.Errorf("EXIFエンコードに失敗: %v", err)
+	cmd := exec.Command("exiftool", "-Orientation="+strconv.Itoa(orientation), "-overwrite_original", filename)
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("警告: exiftoolでの向き情報の設定に失敗しました: %v\n", err)
+		fmt.Printf("テスト画像は生成されましたが、向き情報が設定されていない可能性があります。\n")
 	}
 	
-	jpegData := buf.Bytes()
-	exifData := exifBuf.Bytes()
-	
-	result := make([]byte, 0, len(jpegData) + len(exifData) + 10)
-	result = append(result, jpegData[0:2]...) // SOIマーカー
-	
-	result = append(result, 0xFF, 0xE1)
-	
-	exifLength := len(exifData) + 2 + 6 // 長さ自体の2バイト + "Exif\0\0"の6バイト
-	result = append(result, byte((exifLength>>8)&0xFF), byte(exifLength&0xFF))
-	
-	result = append(result, []byte("Exif\000\000")...)
-	
-	result = append(result, exifData...)
-	
-	result = append(result, jpegData[2:]...)
-	
-	return os.WriteFile(filename, result, 0644)
+	return nil
 }
 
 func testOrientationFix() {
@@ -138,10 +112,10 @@ func testOrientationFix() {
 		return
 	}
 	
-	exiftoolBin := "../../exiftool"
+	ourExiftoolBin := "../../exiftool"
 	
 	fmt.Println("exiftoolをビルドしています...")
-	cmd := exec.Command("go", "build", "-o", exiftoolBin)
+	cmd := exec.Command("go", "build", "-o", ourExiftoolBin)
 	cmd.Dir = "../.."
 	if err := cmd.Run(); err != nil {
 		fmt.Printf("exiftoolのビルドに失敗しました: %v\n", err)
@@ -169,7 +143,7 @@ func testOrientationFix() {
 		}
 		
 		fmt.Printf("テスト %d: EXIFデータを削除しています...\n", i)
-		cmd := exec.Command(exiftoolBin, "remove", resultFile)
+		cmd := exec.Command(ourExiftoolBin, "remove", resultFile)
 		if err := cmd.Run(); err != nil {
 			fmt.Printf("EXIFデータの削除に失敗しました: %v\n", err)
 			continue
